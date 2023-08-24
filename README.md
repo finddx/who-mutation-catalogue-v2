@@ -9,3 +9,23 @@ The bash command used to generate that file is the following:
 snpEff ann -config snpEff.config -upDownStreamLen 2000 -spliceSiteSize 0 -spliceRegionExonSize 0 -spliceRegionIntronMax 0 -spliceRegionIntronMin 0 NC_000962.3 tmp.vcf | grep -v "^#" | cut -f3,8 > annotated_file.txt
 
 ```
+
+# Solo algorithm - R implementation
+Contains all scripts necessary to run the SOLO algorithm in R.
+
+# Solo algorithm - Stata implementation
+Contains all scripts necessary to run the SOLO algorithm in Stata.
+
+# Input data
+Input data. 
+## full_genotypes
+Contains each variant (i.e. features of the models) for each sample. The data is arranged in two sub-levels of folders, one for drugs and one for tiers. The csv files contain 6 columns.
+
+```
+sample_id,resolved_symbol,variant_category,predicted_effect,neutral,"max(af)",position
+```
+
+- resolved_symbol is the gene name to which the variant belongs to
+- variant_category is the final variant name. it is the result of the categorization algorithm which can be found in the PySpark folder.
+
+## phenotype
