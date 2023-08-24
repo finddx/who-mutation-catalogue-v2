@@ -120,7 +120,7 @@
   ## Upgrade to grade 2 based on previous guidance to distinguish between "evidence in version 1" and "guidance before version 1" (e.g. Miotto ERJ2017)
   inputTab %<>%
     mutate(rule_prev_guidance = (!is.na(`Additional grading criteria`) & `Additional grading criteria` %in% PRE_GUIDANCE   & Initial == 3)) %>%
-    applyExpertRule("rule_prev_guidance", description = PRE_GUIDANCE, finalGrade = 2,          finalRule = 31) %>%
+    applyExpertRule("rule_prev_guidance", description = PRE_GUIDANCE, finalGrade = FINAL_FLAG, finalRule = 31) %>%
     mutate(rule_v1_evidence   = (!is.na(Final_v1) & Final_v1 < 3       & !effect_ALL                  %in% INFRAME_EFFECTS & Initial == 3)) %>%
     applyExpertRule("rule_v1_evidence",   description = V1_EVIDENCE , finalGrade = FINAL_FLAG, finalRule = 31.5)
   ## Downgrade to grade 4 the potentially inflated-PPV variants:
@@ -128,7 +128,7 @@
     mutate(rule_inflation = (drug == "Bedaquiline" & gene == BDQ_CFZ_GENE[1] & mutation %in% INFLATED_PPV_VARS)) %>%
     applyExpertRule("rule_inflation",    description = INFLATION, finalGrade = 2, finalRule = 32)
   ## Add comment column to a specified list of mutations or mutation categories, provided they were initially graded 3 and no other rule has applied:
-  commentTab = read_csv(paste0(NON_DATABASE_DIRECTORY, "/Comments_April30.csv"), show_col_types = FALSE, guess_max = Inf) %>%
+  commentTab = read_csv(paste0(NON_DATABASE_DIRECTORY, "/Comments_August3.csv"), show_col_types = FALSE, guess_max = Inf) %>%
     mutate_all(~{trimws(., whitespace = "[\\h\\v]")}) %>%
     set_colnames(c("drug", "gene", "mutation", "comment")) %>%
     mutate_at("mutation", ~{ifelse(. == "any AwR", 1, ifelse(. == "any AwRI", 2, ifelse(. == "any nAwRI", 4, ifelse(. == "any nAwR", 5, .))))})

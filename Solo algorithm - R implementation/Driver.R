@@ -14,8 +14,9 @@ conflicts_prefer(dplyr::filter)
 ## If skipBDQfromSA = TRUE, then a specified subset of samples are not carried forward for Bedaquiline analysis. 
 ## If LoF = TRUE, then pooled loss-of-function mutations are also considered hypotheses for the FDR corrections.
 ## If safe = TRUE (slow option), then a full conversion of variants from V1 to V2 is also performed from scratch.
+## If orphanByDrug = TRUE, then the listing of orphan genotypes is stratified by the drug; this is more accurate.
 ## The remaining options are used to specify the relevant directories and should be left at their default values.
-mainDriver = function(fast = FALSE, correct_all = TRUE, skipBDQfromSA = FALSE, LoF = TRUE, safe = TRUE,
+mainDriver = function(fast = FALSE, correct_all = TRUE, skipBDQfromSA = FALSE, LoF = TRUE, safe = TRUE, orphanByDrug = TRUE,
     EXTRACTION_ID = "2023-04-25T06_00_10.443990_jr_b741dc136e079fa8583604a4915c0dc751724ae9880f06e7c2eacc939e086536", 
     OUTPUT_DIRECTORY = paste0("Results/", EXTRACTION_ID), SCRIPT_LOCATION_DIR = "SOLOport/",
     DATA_DIRECTORY = "SOLO Algorithm Input files/DATABASE EXTRACTION files/", NON_DATABASE_DIRECTORY = "SOLO Algorithm Input files/STATA DTA files/") {
@@ -310,7 +311,7 @@ mainDriver = function(fast = FALSE, correct_all = TRUE, skipBDQfromSA = FALSE, L
       }
     }
   }
-  print(paste("Computing the final grades of", nrow(fullStats), "mutations"))
+  print("Computing the final grades of all mutations")
   finalResult = gradeMutations(skipBDQfromSA = skipBDQfromSA, LoF = LoF, NON_DATABASE_DIRECTORY = str_remove(NON_DATABASE_DIRECTORY, "/$"))
   gradedFilename = paste0(paste("Final_graded_algorithm_catalogue", Sys.Date(), "Leonid", sep = "_"), 
                           ifelse(skipBDQfromSA, "_withoutSA", ""), ifelse(LoF, "_withLoFs", ""), ".csv")
@@ -318,18 +319,32 @@ mainDriver = function(fast = FALSE, correct_all = TRUE, skipBDQfromSA = FALSE, L
   setwd(paste(str_remove(DATA_DIRECTORY, "/$"), str_remove(EXTRACTION_ID, "/$"), "orphan_genotypes/", sep = "/"))
   orphanTab = read_csv(list.files()[1], guess_max = Inf, show_col_types = FALSE) %>%
     rename(gene = 'resolved_symbol', mutation = 'variant_category', effect = 'predicted_effect', drug = 'drug_name') %>%
-    mutate(variant = paste(gene, mutation, sep = "_")) %>%
-    select(variant, sample_id) %>%
-    group_by(variant) %>%
+    mutate(variant = paste(gene, mutation, sep = "_"))
+  if (orphanByDrug) {
+    orphanTab %<>%
+      select(variant, drug, sample_id) %>%
+      group_by(variant, drug)
+  } else {
+    orphanTab %<>%
+      select(variant, sample_id) %>%
+      group_by(variant)
+  }
+  orphanTab %<>%
     mutate(Present_NoPheno = n_distinct(sample_id)) %>%
     slice(1) %>%
     ungroup() %>%
     select(-sample_id)
   print(paste("Adding in the", nrow(orphanTab), "orphan mutations"))
   setwd(OUTPUT_DIRECTORY)
-  finalResult %<>%
-    full_join(orphanTab, by = "variant")
-  write_csv(finalResult, paste0(gradedFilename, "_withOrphans.csv"))
+  if (orphanByDrug) {
+    finalResult %<>%
+      full_join(orphanTab, by = c("variant", "drug"))
+  } else {
+    finalResult %<>%
+      full_join(orphanTab, by = "variant")
+  }
+  ## finalResult %<>% mutate_at("Present_NoPheno", ~{replace_na(., 0)})
+  write_csv(finalResult, paste0(gradedFilename, "_withOrphans", ifelse(orphanByDrug, "_Stratified", ""), ".csv"))
   setwd("../../")
   fullDataset
 }
