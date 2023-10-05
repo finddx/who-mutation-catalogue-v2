@@ -26,18 +26,19 @@
     filter(datasets == "WHO")
   inputTab %<>%
     filter(datasets == "ALL") %>%
-    full_join(Tab0, by = c("variant", "drug", "gene", "mutation"), suffix = c("_ALL", "_WHO"))
+    full_join(Tab0, by = c("variant", "drug", "gene", "mutation"), suffix = c("_ALL", "_WHO")) %>%
+    mutate_at("Initial_WHO", ~{ifelse(is.na(.), 3, .)}) ## Not all variants are initially WHO-graded!
   inputTab %<>%
-    mutate(    Initial    = ifelse(is.na(Initial_WHO) | Initial_WHO == 3,                                                  Initial_ALL , NA)) %>%
-    mutate(    datasets   = ifelse(is.na(Initial_WHO) | Initial_WHO == 3,                                                  "ALL"       , NA)) %>%
-    mutate_at("Initial" , ~{ifelse(!is.na(Initial_WHO) & Initial_WHO == Initial_ALL,                                       Initial_WHO , .)}) %>%
-    mutate_at("datasets", ~{ifelse(!is.na(Initial_WHO) & Initial_WHO == Initial_ALL,                                       "BOTH"      , .)}) %>%
-    mutate_at("Initial" , ~{ifelse(Initial_ALL == 3 & !is.na(Initial_WHO),                                                 Initial_WHO , .)}) %>%
-    mutate_at("datasets", ~{ifelse(Initial_ALL == 3 & !is.na(Initial_WHO),                                                 "WHO"       , .)}) %>%
-    mutate_at("Initial" , ~{ifelse(!is.na(Initial_WHO) & pmax(Initial_WHO, Initial_ALL) <= 2 & Initial_WHO != Initial_ALL, Initial_WHO , .)}) %>%
-    mutate_at("datasets", ~{ifelse(!is.na(Initial_WHO) & pmax(Initial_WHO, Initial_ALL) <= 2 & Initial_WHO != Initial_ALL, "WHO"       , .)}) %>%
-    mutate_at("Initial" , ~{ifelse(!is.na(Initial_WHO) & Initial_WHO == 4 & Initial_ALL <= 2,                              INITIAL_FLAG, .)}) %>%
-    mutate_at("datasets", ~{ifelse(!is.na(Initial_WHO) & Initial_WHO == 4 & Initial_ALL <= 2,                              "FLAG"      , .)})
+    mutate(    Initial    = ifelse(Initial_WHO == Initial_ALL         , Initial_WHO , NA)) %>%
+    mutate(    datasets   = ifelse(Initial_WHO == Initial_ALL         , "ALL+WHO"   , NA)) %>%
+    mutate_at("Initial" , ~{ifelse(Initial_WHO == 3 & Initial_ALL != 3, Initial_ALL , .)}) %>%
+    mutate_at("datasets", ~{ifelse(Initial_WHO == 3 & Initial_ALL != 3, "ALL"       , .)}) %>%
+    mutate_at("Initial" , ~{ifelse( is.na(Initial_ALL) | (Initial_ALL == 3 & Initial_WHO != 3),             Initial_WHO , .)}) %>%
+    mutate_at("datasets", ~{ifelse( is.na(Initial_ALL) | (Initial_ALL == 3 & Initial_WHO != 3),             "WHO"       , .)}) %>%
+    mutate_at("Initial" , ~{ifelse( pmax(Initial_WHO, Initial_ALL) <= 2 & Initial_WHO != Initial_ALL,       Initial_WHO , .)}) %>%
+    mutate_at("datasets", ~{ifelse( pmax(Initial_WHO, Initial_ALL) <= 2 & Initial_WHO != Initial_ALL,       "WHO"       , .)}) %>%
+    mutate_at("Initial" , ~{ifelse( Initial_WHO == 4 & Initial_ALL <= 2,                                    INITIAL_FLAG, .)}) %>%
+    mutate_at("datasets", ~{ifelse( Initial_WHO == 4 & Initial_ALL <= 2,                                    "FLAG"      , .)})
   ## Extract additional grading criteria from v1, remove unused ones, then prepare to compute the final grades and record additional grading criteria
   ## Note that only one rule is applied per variant-drug pair; those to which a rule has been applied are marked by setting anyRule to TRUE throughout
   extraTab = read_csv("v1_grades.csv", guess_max = Inf, show_col_types = FALSE) %>%
@@ -54,11 +55,11 @@
     applyExpertRule("rule_V1Only", description = V1_NEUTRALS, finalGrade = 4, finalRule = 16.5)
   ## Downgrade to grade 2 variants initially graded 1 by the ALL dataset only
   inputTab %<>%
-    mutate(rule_AllOnly     = (Initial_ALL == 1 & (is.na(Initial_WHO) | Initial_WHO == 3))) %>%
+    mutate(rule_AllOnly     = (Initial_ALL == 1 & Initial_WHO == 3)) %>%
     applyExpertRule("rule_AllOnly",  description = ALL_ONLY,  finalGrade = 2, finalRule = 17)
   ## Mark those variants which had discrepant AwR grades in the two datasets as "Based on WHO dataset"
   inputTab %<>%
-    mutate(rule_WHOBased    = (!is.na(Initial_WHO) & pmax(Initial_WHO, Initial_ALL) <= 2 & Initial_WHO != Initial_ALL)) %>%
+    mutate(rule_WHOBased    = (pmax(Initial_WHO, Initial_ALL) <= 2 & Initial_WHO != Initial_ALL)) %>%
     applyExpertRule("rule_WHOBased",  description = WHO_BASED, finalGrade = NA, finalRule = 18)
   ## Mark those variants which triggered a flag at the initial classification as "Manual check required"
   inputTab %<>%

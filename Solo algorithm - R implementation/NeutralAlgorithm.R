@@ -280,7 +280,7 @@ convertV1ToV2 = function(safe = FALSE, NON_DATABASE_DIRECTORY="STATA DTA files",
     ungroup() %>%
     select(-N)
   ## Recode the final grading values for certain specific variants
-  yTab = tibble(variant_category_v2 = c("ethA_p.Met1?", "katG_p.Val1?", "pncA_p.Met1?"), final_grading_v1 = GRADES[c(1, 3, 1)])
+  yTab = tibble(variant_category_v2 = c("ethA_p.Met1?", "katG_p.Met1?", "pncA_p.Met1?"), final_grading_v1 = GRADES[c(1, 3, 1)])
   altTab %<>%
     recodeValues(yTab)
   ## Save a version with old and new variants and v1 confidence grading
