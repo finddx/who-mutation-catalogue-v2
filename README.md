@@ -29,3 +29,10 @@ sample_id,resolved_symbol,variant_category,predicted_effect,neutral,"max(af)",po
 - variant_category is the final variant name. it is the result of the categorization algorithm which can be found in the PySpark folder.
 
 ## phenotype
+```
+sample_id,phenotypic_category,phenotype,box
+```
+
+- phenotypic_category is the overall category the test was assigned to ("WHO" or "ALL")
+- phenotype is the result (R or S)
+- box is the subcategory of the test. Refer to the mutation catalogue output for more explanations
